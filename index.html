@@ -275,7 +275,7 @@ async function renderResumen(frecuencias,docentesPalabra){
   interpretacion += `Palabras más frecuentes: <b>${palabrasFrecuentes.slice(0,4).map(([w])=>w).join(', ')}</b>.<br>`;
   
   try {
-    const HF_TOKEN = "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";  // 👈 pega tu token aquí
+    const HF_TOKEN = "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";  // 👈 pega tu token aquí
     const HF_MODEL = "sshleifer/distilbart-cnn-12-6";
 
     const rawText = textosRaw.join(" ");
@@ -330,4 +330,5 @@ function buscarEnRespuestas() {
 </script>
 </body>
 </html>
+
 
