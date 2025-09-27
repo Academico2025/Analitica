@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Atlas TI Lite PRO – IA + Análisis Cualitativo</title>
+  <title>Atlas TI Lite PRO – IA + Análisis Cualitativo (Extended)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!-- vis-network CDN (JS y CSS) -->
   <script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
@@ -13,9 +13,9 @@
     * { box-sizing: border-box; }
     body { font-family: Segoe UI, Arial, sans-serif; background:#f5f6fa; margin:0; color:#232323; }
     header { background:var(--pri); color:#fff; padding:1.5rem 1rem; text-align:center; }
-    .container { max-width:1150px; margin:2rem auto; padding:2rem; background:#fff; border-radius:16px; box-shadow:0 4px 24px #0002; }
-    textarea { width:100%; min-height:120px; font-size:1rem; padding:0.7rem; border-radius:8px; border:1px solid #b3b3b3; margin-bottom:1.2rem; }
-    button { background:var(--pri); color:#fff; border:none; border-radius:12px; padding:0.7rem 2.2rem; font-size:1rem; cursor:pointer; }
+    .container { max-width:1200px; margin:2rem auto; padding:2rem; background:#fff; border-radius:16px; box-shadow:0 4px 24px #0002; }
+    textarea { width:100%; min-height:160px; font-size:1rem; padding:0.7rem; border-radius:8px; border:1px solid #b3b3b3; margin-bottom:1rem; }
+    button { background:var(--pri); color:#fff; border:none; border-radius:12px; padding:0.7rem 1.0rem; font-size:1rem; cursor:pointer; }
     button:hover { background:var(--pri-2); }
     .row { display:flex; gap:1.5rem; }
     .panel { flex:1; min-width:270px; }
@@ -31,28 +31,41 @@
     .codetag { font-size:.96em; background:#c7d2fe; padding:2px 8px; border-radius:9px; margin:3px 3px 6px 0; color:#2c5282; cursor:pointer; display:inline-block;}
     .codetag.selected, .codetag:hover { background:var(--pri); color:#fff; }
     .fragment { background:#fff59f; border-radius:3px; }
-    #network { width:100%; height:230px; border:1px solid #aaa; border-radius:10px; background:#faf9f5; margin-bottom:14px; }
+    #network { width:100%; height:260px; border:1px solid #aaa; border-radius:10px; background:#faf9f5; margin-bottom:14px; }
     mark { background:#ffff00; color:#000; }
     .note { font-size:.9rem; color:#555; }
     .error { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:.6rem .8rem; border-radius:8px; margin-top:.6rem; }
-    @media (max-width:950px) { .row { flex-direction:column; } .panel{ min-width:100px;} #network{ height:160px; } }
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+    .pill { background:#e5e7eb; border-radius:999px; padding:6px 10px; }
+    .pager { display:flex; gap:8px; align-items:center; margin-top:8px; }
+    .pager button { padding:6px 10px; border-radius:8px; }
+    @media (max-width:980px) { .row { flex-direction:column; } .panel{ min-width:100px;} #network{ height:200px; } }
   </style>
 </head>
 <body>
   <header>
     <h1>Atlas TI Lite PRO – Cualitativo Interactivo con IA</h1>
-    <div>Codifica, interpreta, grafica, explora relaciones y resume (con o sin IA)</div>
+    <div>Admite colecciones grandes (líneas o párrafos) • Resumen largo con IA o local</div>
   </header>
 
   <div class="container">
-    <h2>1) Pega aquí las respuestas (una por línea; máximo 10)</h2>
-    <textarea id="input" placeholder="Ejemplo:
-Faltan recursos para materiales didácticos y formación docente.
-La comunicación con familias mejoró, pero aún hay ausentismo.
-Necesitamos más capacitación en TIC y tiempos de planeación."></textarea>
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+    <h2>1) Pega aquí las respuestas</h2>
+    <textarea id="input" placeholder="Pega MUCHAS respuestas (líneas o párrafos). El sistema paginará y tomará el máximo seleccionado."></textarea>
+
+    <div class="controls">
+      <label class="pill">
+        <input type="radio" name="splitMode" value="line" checked /> Separar por <b>líneas</b>
+      </label>
+      <label class="pill">
+        <input type="radio" name="splitMode" value="para" /> Separar por <b>párrafos</b> (doble salto de línea)
+      </label>
+      <label class="pill">
+        Máx. respuestas a procesar:
+        <input id="maxResp" type="number" min="20" max="300" step="10" value="200" style="width:80px; margin-left:6px;">
+      </label>
       <button onclick="analizar()">Interpretar y graficar</button>
-      <span class="note">Consejo: ingresa 5–10 respuestas (una por línea). El resumen usa IA si configuras tu API key.</span>
+      <button onclick="probarGemini()">Probar API</button>
+      <span class="note">Tip: 100–200 respuestas da buen equilibrio entre detalle y rendimiento.</span>
     </div>
 
     <div class="row" style="margin-top:1.2rem;">
@@ -61,6 +74,11 @@ Necesitamos más capacitación en TIC y tiempos de planeación."></textarea>
         <h3>Respuestas (selecciona texto y asígnale código)</h3>
         <input type="text" id="search" style="width:80%;" placeholder="Buscar..." oninput="buscarEnRespuestas()" />
         <div id="respuestas" class="note">Aún no hay resultados.</div>
+        <div class="pager">
+          <button onclick="prevPage()">◀ Anterior</button>
+          <span id="pageInfo" class="note">Página 0/0</span>
+          <button onclick="nextPage()">Siguiente ▶</button>
+        </div>
       </div>
 
       <!-- Panel Central -->
@@ -90,31 +108,45 @@ Necesitamos más capacitación en TIC y tiempos de planeación."></textarea>
 
     <div class="panel-border" style="margin-top:1.2rem;">
       <h3>Resumen Automático</h3>
-      <div class="note">Si configuras API key de Gemini, se usará IA; si no, verás un resumen local extendido.</div>
+      <div class="note">Con API key de Gemini generará un informe largo con continuaciones; sin IA verás un resumen local extendido.</div>
       <div id="resumen"></div>
     </div>
   </div>
 
 <script>
-/* ================== CONFIGURACIÓN IA (opcional) ================== */
-const GEMINI_API_KEY = "TU_API_KEY_AQUI";   // <- pon aquí tu key o deja vacío para usar resumen local
-const GEMINI_MODEL  = "gemini-2.5-flash";
+/* ================== CONFIGURACIÓN IA (usa tu cURL) ================== */
+const GEMINI_API_KEY = "AIzaSyBa33PhNslR17CDCgZ6SFOjp_CSm815YKY"; // expuesta para pruebas
+const GEMINI_MODEL  = "gemini-2.0-flash";                           // modelo del cURL
 /* ================================================================ */
 
 const STOPWORDS = ["de","la","y","el","en","los","del","que","se","con","por","las","para","es","una","un","al","lo","sus","o","a","como","más","le","su","ha","ya","pero","sí","no","fue","son","han","sobre","entre","también","cuando","muy","sin","hay","todo","nos","esta","me","mi","yo","él","tiene","si","qué","quien","desde","porque","hace","esto","cada","solo","donde","puede","ser","hasta"];
-let textosRaw=[], codigos=[], codificaciones={}, selectedCodigo=null, palabrasTop=[], palabrasPorDocente=[];
 
-/* ===== Helpers DOM seguros ===== */
+let textosRaw=[], textosPaginados=[], page=1, pageSize=30;
+let codigos=[], codificaciones={}, selectedCodigo=null, palabrasTop=[], palabrasPorDocente=[];
+
+/* ===== Helpers DOM ===== */
 function setHTML(id, html){ const el = document.getElementById(id); if(el) el.innerHTML = html; }
 function appendError(id, msg){ const el = document.getElementById(id); if(!el) return; el.innerHTML = `<div class="error">${msg}</div>`; }
+function getSplitMode(){ return [...document.getElementsByName('splitMode')].find(r=>r.checked)?.value || 'line'; }
 
 /* ================== Núcleo de análisis ================== */
 function analizar() {
   try {
     const raw = (document.getElementById('input').value || "").trim();
-    if(!raw) { alert("Pega los textos (máximo 10 respuestas, una por línea)."); return; }
+    if(!raw) { alert("Pega los textos. Puedes incluir cientos de líneas o párrafos."); return; }
 
-    textosRaw = raw.split(/\r?\n+/).map(t=>t.trim()).filter(Boolean).slice(0,10);
+    // Separación configurable
+    const mode = getSplitMode();
+    let chunks;
+    if(mode === 'para') {
+      chunks = raw.split(/\r?\n{2,}/).map(t=>t.trim()).filter(Boolean);
+    } else {
+      chunks = raw.split(/\r?\n+/).map(t=>t.trim()).filter(Boolean);
+    }
+
+    // Límite configurable (hasta 300 por UI)
+    const maxResp = Math.max(20, Math.min(300, parseInt(document.getElementById('maxResp').value || "200", 10)));
+    textosRaw = chunks.slice(0, maxResp);
 
     // Conteo de palabras
     const frecuencias = {};
@@ -127,7 +159,16 @@ function analizar() {
       palabras.forEach(w=>{ frecuencias[w]=(frecuencias[w]||0)+1; });
       return set;
     });
-    palabrasTop = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([w])=>w);
+
+    // Top palabras para la RED (15 máx para rendimiento)
+    palabrasTop = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([w])=>w);
+
+    // Paginación de respuestas
+    page = 1;
+    textosPaginados = [];
+    for(let i=0; i<textosRaw.length; i+=pageSize){
+      textosPaginados.push(textosRaw.slice(i, i+pageSize));
+    }
 
     renderRespuestas();
     renderNube(frecuencias);
@@ -136,7 +177,6 @@ function analizar() {
     renderCodigos();
     renderRedPalabras(docentesPalabra);
     renderResumen(frecuencias, docentesPalabra);
-    selectedCodigo = null;
     document.getElementById('search').value='';
 
   } catch (e) {
@@ -145,15 +185,33 @@ function analizar() {
   }
 }
 
+/* ================== Paginación ================== */
+function updatePagerInfo(){
+  const total = textosPaginados.length || 0;
+  setHTML('pageInfo', `Página ${total?page:0}/${total}`);
+}
+function prevPage(){
+  if(page>1){ page--; renderRespuestas(); }
+}
+function nextPage(){
+  if(page<textosPaginados.length){ page++; renderRespuestas(); }
+}
+
 /* ================== Respuestas + Codificación ================== */
 function renderRespuestas() {
+  updatePagerInfo();
+  if(textosPaginados.length===0){ setHTML('respuestas', "<i>Sin resultados.</i>"); return; }
+  const slice = textosPaginados[page-1] || [];
   let html='';
-  textosRaw.forEach((txt,i)=>{
+  const baseIndex = (page-1)*pageSize;
+
+  slice.forEach((txt,i)=>{
     const safe = txt.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    const idxReal = baseIndex + i;
     html += `<div style="margin-bottom:12px;position:relative;">
-      <span style="font-weight:600;color:var(--pri);">Docente ${i+1}:</span>
-      <div style="cursor:text;" onmouseup="codificarFragmento(${i})" id="texto${i}">
-        ${resaltarCodigos(safe,i)}
+      <span style="font-weight:600;color:var(--pri);">Docente ${idxReal+1}:</span>
+      <div style="cursor:text;" onmouseup="codificarFragmento(${idxReal})" id="texto${idxReal}">
+        ${resaltarCodigos(safe, idxReal)}
       </div>
     </div>`;
   });
@@ -172,13 +230,12 @@ function resaltarCodigos(txt,index){
 function codificarFragmento(i){
   const sel = window.getSelection();
   const tNode = document.getElementById("texto"+i);
-  if(!sel.anchorNode || !tNode.contains(sel.anchorNode)) return;
+  if(!sel.anchorNode || !tNode || !tNode.contains(sel.anchorNode)) return;
   const text = sel.toString();
   if(!text.trim()) return;
   const code = prompt(`Asignar código a:\n"${text}"\n(Si no existe, se creará)`);
   if(!code) return;
 
-  // Hallar índice robusto dentro del texto plano
   const fullText = (tNode.innerText||tNode.textContent);
   const idx = fullText.indexOf(text);
   const start = idx >= 0 ? idx : 0;
@@ -235,18 +292,18 @@ function filtrarPorCodigo(c){
 
 /* ================== Nube, Barras, Tabla ================== */
 function renderNube(frecuencias){
-  const top = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]).slice(0,22);
+  const top = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]).slice(0,30);
   const html = top.map(([w])=>`<span onclick="buscarNube('${w}')">${w}</span>`).join(' ');
   setHTML('cloud', html || "—");
 }
 function renderBarras(docentesPalabra){
-  const top = Object.entries(docentesPalabra).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const top = Object.entries(docentesPalabra).sort((a,b)=>b[1]-a[1]).slice(0,15);
   const total = textosRaw.length || 1;
   const html = top.map(([w,c])=>{
     const perc = ((c/total)*100).toFixed(1);
-    const wpx = Math.max(20, c*22);
+    const wpx = Math.max(20, c*18);
     return `<div class="chart-bar">
-      <span style="width:110px;display:inline-block;">${w}</span>
+      <span style="width:140px;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${w}</span>
       <div class="bar" style="width:${wpx}px"></div>
       <span class="percent">${perc}% docentes</span>
     </div>`;
@@ -256,7 +313,7 @@ function renderBarras(docentesPalabra){
 function renderTablaPalabras(docentesPalabra, frecuencias){
   let table = `<tr><th>Palabra</th><th>Frecuencia</th><th>% Docentes</th></tr>`;
   const total = textosRaw.length || 1;
-  const rows = Object.entries(docentesPalabra).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const rows = Object.entries(docentesPalabra).sort((a,b)=>b[1]-a[1]).slice(0,12);
   if(rows.length===0) { setHTML('tablaPalabras', ""); return; }
   rows.forEach(([w,c])=>{
     const perc = ((c/total)*100).toFixed(1);
@@ -265,21 +322,26 @@ function renderTablaPalabras(docentesPalabra, frecuencias){
   setHTML('tablaPalabras', table);
 }
 
-/* ================== Red de co-ocurrencias ================== */
+/* ================== Red de co-ocurrencias (con estabilización y parada) ================== */
 function renderRedPalabras(docentesPalabra){
   try {
+    const container = document.getElementById('network');
+    const warn = document.getElementById('networkError');
+    if(warn) warn.innerHTML = '';
+    if(!container){ return; }
+
     if(!window.vis || !vis.Network){
       appendError("networkError", "No se pudo cargar el componente de red (vis-network). Continúas con el resto del análisis.");
       return;
     }
+
+    // Construcción (top ya limitado a 15)
+    const top = palabrasTop.slice();
     const pares = {};
     const nodes = [];
     const edges = [];
-    const top = palabrasTop.slice();
-    const sets = palabrasPorDocente;
 
-    // Armar pares por co-ocurrencia
-    sets.forEach(set=>{
+    palabrasPorDocente.forEach(set=>{
       top.forEach(w1=>{
         if(set.has(w1)){
           top.forEach(w2=>{
@@ -292,29 +354,64 @@ function renderRedPalabras(docentesPalabra){
       });
     });
 
-    // Nodos
     top.forEach(w=>{
-      nodes.push({ id:w, label:w, value:(docentesPalabra[w]||1), color:"#4c51bf" });
+      nodes.push({
+        id: w,
+        label: w,
+        value: (docentesPalabra[w]||1),
+        color: "#4c51bf",
+        font: { size: 16, color: '#434190' }
+      });
     });
 
-    // Aristas (solo si aparece en 2+ docentes)
     Object.entries(pares).forEach(([key,val])=>{
-      if(val>1){
-        const [a,b]=key.split('—');
-        edges.push({ from:a, to:b, width:1+val, color:{color:'#90cdf4'} });
+      if(val > 1){
+        const [a,b] = key.split('—');
+        edges.push({
+          from: a,
+          to: b,
+          width: 1 + Math.min(val, 4),
+          color: { color:'#90cdf4' },
+          smooth: { type: 'dynamic' }
+        });
       }
     });
 
-    const container = document.getElementById('network');
-    container.innerHTML = '';
-    if(nodes.length>1){
-      new vis.Network(container, { nodes:new vis.DataSet(nodes), edges:new vis.DataSet(edges) }, {
-        nodes:{ shape:'dot', size:22, font:{ size:16, color:'#434190' } },
-        edges:{ smooth:{ type:'dynamic' }, color:{ color:'#ddd' }, width:2, selectionWidth:4 },
-        physics:{ stabilization:true, barnesHut:{ springConstant:0.08 } },
-        interaction:{ hover:true }
-      });
+    if(nodes.length < 2 || edges.length === 0){
+      container.innerHTML = '';
+      appendError("networkError", "No hay suficientes co-ocurrencias para dibujar la red (prueba con más respuestas o menos stopwords).");
+      return;
     }
+
+    container.innerHTML = '';
+    const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+
+    const options = {
+      layout: { improvedLayout: true, randomSeed: 42 },
+      physics: {
+        enabled: true,
+        solver: 'forceAtlas2Based',
+        forceAtlas2Based: {
+          gravitationalConstant: -30,
+          springConstant: 0.08,
+          springLength: 120,
+          damping: 0.45,
+          avoidOverlap: 0.2
+        },
+        stabilization: { enabled: true, iterations: 200, updateInterval: 25, fit: true }
+      },
+      nodes: { shape: 'dot', size: 22, scaling: { min: 12, max: 32 } },
+      edges: { color: { color:'#ddd' }, selectionWidth: 4 },
+      interaction: { hover: true, zoomView: true, dragView: true, dragNodes: true }
+    };
+
+    const network = new vis.Network(container, data, options);
+
+    // 🔒 Desactivar física al estabilizar para que el grafo quede quieto
+    network.once('stabilizationIterationsDone', function () {
+      network.setOptions({ physics: false });
+    });
+
   } catch (e){
     console.error(e);
     appendError("networkError", "Ocurrió un problema dibujando la red. Revisa la consola.");
@@ -325,82 +422,77 @@ function renderRedPalabras(docentesPalabra){
 async function renderResumen(frecuencias, docentesPalabra){
   const palabrasFrecuentes = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]);
   let interpretacion = `Se analizaron <b>${textosRaw.length}</b> respuestas.<br>`;
-  interpretacion += `Palabras más frecuentes: <b>${palabrasFrecuentes.slice(0,6).map(([w])=>w).join(', ') || "—"}</b>.<br>`;
+  interpretacion += `Palabras más frecuentes: <b>${palabrasFrecuentes.slice(0,8).map(([w])=>w).join(', ') || "—"}</b>.<br>`;
 
   const rawText = textosRaw.join(" ");
-  if(!rawText){
+  const MAX_CHARS = 9500;
+  const sample = rawText.length > MAX_CHARS ? rawText.slice(0, MAX_CHARS) : rawText;
+
+  if(!sample){
     document.getElementById('resumen').innerHTML = interpretacion + "<i>Sin texto para resumir.</i>";
     return;
   }
 
-  // Si no hay API key -> resumen local extendido
-  if(!GEMINI_API_KEY || GEMINI_API_KEY === "TU_API_KEY_AQUI"){
+  if(!GEMINI_API_KEY){
     const local = resumenLocalHeuristicoExtendido(frecuencias);
     document.getElementById('resumen').innerHTML = interpretacion + `<br><b>Resumen (local):</b> ${local}`;
     return;
   }
 
-  // Prompt estructurado para + extensión (≈700–1000 palabras)
   const top8 = palabrasFrecuentes.slice(0,8).map(([w])=>w).join(', ');
   const promptBase = `
 Eres analista cualitativo senior. Escribe un INFORME SÓLIDO y EXTENSO (700–1000 palabras) en español, bien estructurado y sin relleno, sobre respuestas de docentes.
 
-Estructura y requisitos (usa subtítulos en **negrita**):
-1) **Hallazgos clave** (4–7 puntos, oraciones completas).
-2) **Evidencias textuales sintéticas**: 6–10 citas reconstruidas entre comillas cortas (no literales; síntesis fiel).
-3) **Matriz de temas vs. % de docentes** (tabla en texto; 6–8 filas). Estima % con base en co-ocurrencias.
-4) **Causas raíz (5 Porqués)**: aplica el método a 2 problemas nucleares.
-5) **Implicaciones para la práctica docente** (3–5 implicaciones).
-6) **Plan de acción priorizado (90 días)**: 6–10 acciones SMART, con responsable y métrica.
-7) **Limitaciones del análisis** (2–3 límites).
+Estructura y requisitos (formatea en estilo Markdown con subtítulos, listas y tablas en texto):
+1) **Hallazgos clave** (4–7 puntos).
+2) **Evidencias textuales sintéticas**: 6–10 citas reconstruidas breves (no literales).
+3) **Matriz de temas vs. % de docentes** (6–8 filas, estimado).
+4) **Causas raíz (5 Porqués)** en 2 problemas.
+5) **Implicaciones** (3–5).
+6) **Plan de acción 90 días** (6–10 acciones SMART con responsable y métrica).
+7) **Limitaciones** (2–3).
 
-Palabras frecuentes para orientar el análisis: ${top8}.
-Texto a analizar (muestra acotada): ${rawText.slice(0, 5000)}
-Escribe en tono claro y profesional, evitando repetición.`;
+Palabras frecuentes para orientar: ${top8}.
+Texto a analizar (muestra): ${sample}
+Estilo claro y profesional, evita repetir.`;
 
   try {
     const cuerpo = {
       contents: [{ parts: [{ text: promptBase }] }],
       generationConfig: {
         temperature: 0.35,
-        maxOutputTokens: 1400,           // ↑ más largo
+        maxOutputTokens: 1400,
         topK: 32,
-        topP: 0.9,
-        // Algunos despliegues aceptan este campo; si no, lo ignora sin fallar
-        responseMimeType: "text/markdown"
+        topP: 0.9
       }
     };
 
     const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-    const headers = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY };
+    const headers = { "Content-Type": "application/json", "X-goog-api-key": GEMINI_API_KEY };
 
-    // Primer intento
     let resumen = await llamarGemini(ENDPOINT, headers, cuerpo);
 
-    // Si quedó corto (< 2500 caracteres), pedir ampliación (hasta 2 veces)
+    // Ampliaciones si quedó corto
     let intentos = 0;
     while ((resumen.replace(/\s+/g,' ').length < 2500) && intentos < 2) {
       const promptContinuacion = `
-Elabora una AMPLIACIÓN SIN REPETIR contenido previo. Profundiza en:
+AMPLÍA SIN REPETIR contenido previo. Profundiza en:
 - variaciones por perfil docente,
 - tensiones y trade-offs,
-- riesgos de implementación y mitigaciones,
-- indicadores de resultado (leading/lagging) con fórmulas,
-- ejemplo de rúbrica (4 niveles) para evaluar avance.
-
-Usa secciones nuevas y complementarias.`;
+- riesgos y mitigaciones,
+- indicadores (leading/lagging) con fórmulas,
+- rúbrica (4 niveles) para evaluar avance.`;
       const cuerpo2 = {
         contents: [
-          { parts: [{ text: promptBase }] },            // contexto original
-          { parts: [{ text: resumen }] },               // respuesta previa
-          { parts: [{ text: promptContinuacion }] }     // pedido de ampliación
+          { parts: [{ text: promptBase }] },
+          { parts: [{ text: resumen }] },
+          { parts: [{ text: promptContinuacion }] }
         ],
         generationConfig: {
           temperature: 0.35,
           maxOutputTokens: 1200,
           topK: 32,
-          topP: 0.9,
-          responseMimeType: "text/markdown"
+          topP: 0.9
         }
       };
       const extra = await llamarGemini(ENDPOINT, headers, cuerpo2);
@@ -437,16 +529,16 @@ async function llamarGemini(url, headers, body){
 /* ====== Resumen local extendido (sin IA) ====== */
 function resumenLocalHeuristicoExtendido(frecuencias){
   const orden = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]);
-  const top = orden.slice(0,10).map(([w])=>w);
+  const top = orden.slice(0,12).map(([w])=>w);
   if(top.length===0) return "Las respuestas son muy breves o heterogéneas; no se observan patrones robustos.";
 
-  const temas = top.slice(0,5);
-  const soporte = top.slice(5,10);
+  const temas = top.slice(0,6);
+  const soporte = top.slice(6,12);
 
   return `
-**Hallazgos clave.** Aparecen de forma reiterada los temas: ${temas.join(", ")}. Estas nociones se conectan con términos de soporte como ${soporte.join(", ")} que refuerzan necesidades operativas y pedagógicas.
+**Hallazgos clave.** Aparecen de forma reiterada los temas: ${temas.join(", ")}. Se conectan con términos de soporte como ${soporte.join(", ")}.
 
-**Evidencias textuales sintéticas.** “Faltan tiempos protegidos para planear”, “la relación con familias mejoró, pero no es constante”, “se requiere formación práctica en TIC”.
+**Evidencias textuales sintéticas.** “Faltan tiempos protegidos para planear”, “mejoró la relación con familias, pero no es constante”, “se requiere formación práctica en TIC”.
 
 **Matriz de temas vs. % docentes (estimado).**
 - ${temas[0]} — 60–80%
@@ -454,12 +546,13 @@ function resumenLocalHeuristicoExtendido(frecuencias){
 - ${temas[2]} — 40–60%
 - ${temas[3]} — 30–50%
 - ${temas[4]} — 25–45%
+- ${temas[5]} — 20–40%
 
-**Causas raíz (5 Porqués).** Se identifican cuellos de botella vinculados a organización del tiempo, dotación y coordinación interna.
+**Causas raíz (5 Porqués).** Cuellos de botella: organización del tiempo, dotación, coordinación interna.
 
-**Plan de acción (90 días).** 6–8 acciones SMART priorizadas: clarificar responsables, calendarizar espacios de planeación, checklist de aula, microcapacitaciones prácticas, seguimiento quincenal y tablero de indicadores básicos.
+**Plan de acción (90 días).** 6–10 acciones SMART: responsables claros, calendarización, checklist de aula, microcapacitaciones, seguimiento quincenal, tablero de indicadores.
 
-**Limitaciones.** Muestra pequeña y vocabulario no controlado; se requieren más casos y validación cruzada.`;
+**Limitaciones.** Muestra no probabilística y vocabulario libre; requiere validación adicional.`;
 }
 
 /* ================== Búsqueda y resaltado ================== */
@@ -469,18 +562,50 @@ function buscarNube(palabra){
 }
 function buscarEnRespuestas() {
   const q = (document.getElementById('search').value||"").trim().toLowerCase();
+  if(textosPaginados.length===0){ setHTML('respuestas', "<i>Sin resultados.</i>"); return; }
+  const slice = textosPaginados[page-1] || [];
+  const baseIndex = (page-1)*pageSize;
+
   let html='';
-  textosRaw.forEach((txt,i)=>{
+  slice.forEach((txt,i)=>{
     let safe = txt.replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    // aplicar resaltado de códigos primero
-    safe = resaltarCodigos(safe, i);
+    const idxReal = baseIndex + i;
+    safe = resaltarCodigos(safe, idxReal);
     if(q && safe.toLowerCase().includes(q)){
       const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi");
       safe = safe.replace(regex, '<mark>$1</mark>');
     }
-    html += `<div style="margin-bottom:12px;"><b>Docente ${i+1}:</b><div>${safe}</div></div>`;
+    html += `<div style="margin-bottom:12px;"><b>Docente ${idxReal+1}:</b><div>${safe}</div></div>`;
   });
   setHTML('respuestas', html || "<i>No hay resultados.</i>");
+}
+
+/* ================== Botón de prueba rápida de API ================== */
+async function probarGemini(){
+  try {
+    if(!GEMINI_API_KEY){
+      alert("Configura GEMINI_API_KEY primero."); return;
+    }
+    const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+    const resp = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-goog-api-key": GEMINI_API_KEY },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: "Explain how AI works in a few words" }] }]
+      })
+    });
+    if(!resp.ok){
+      let detail=""; try{ detail=(await resp.json())?.error?.message||"";}catch{}
+      throw new Error(`${resp.status} ${resp.statusText}${detail? " – "+detail: ""}`);
+    }
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "(sin texto)";
+    console.log("Gemini OK:", text);
+    alert("Gemini respondió:\n\n" + text);
+  } catch(e){
+    console.error(e);
+    alert("Error al llamar Gemini: " + e.message);
+  }
 }
 </script>
 </body>
