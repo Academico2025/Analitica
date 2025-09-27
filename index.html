@@ -1,175 +1,168 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Atlas TI Lite PRO – IA + Análisis Cualitativo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- vis-network CDN para red -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- vis-network CDN (JS y CSS) -->
   <script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
-  <link href="https://unpkg.com/vis-network@9.1.9/dist/dist/vis-network.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.css"/>
+
   <style>
-    body { font-family: Segoe UI, Arial, sans-serif; background: #f5f6fa; margin:0; color: #232323;}
-    header { background: #4c51bf; color: #fff; padding: 1.5rem 1rem; text-align: center;}
-    .container { max-width: 1150px; margin: 2rem auto; padding: 2rem; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px #0002;}
-    textarea { width: 100%; min-height: 120px; font-size: 1rem; padding: 0.7rem; border-radius: 8px; border: 1px solid #b3b3b3; margin-bottom: 1.2rem;}
-    button { background: #4c51bf; color: #fff; border: none; border-radius: 12px; padding: 0.7rem 2.2rem; font-size: 1rem; cursor: pointer;}
-    button:hover { background: #434190; }
-    .row { display: flex; gap: 1.5rem;}
-    .panel { flex: 1; min-width: 270px;}
-    .panel-border {border:1px solid #d1d5db; border-radius: 11px; padding: 0.9rem; background:#f7fafc;}
-    .cloud { font-size: 1.3rem; line-height: 2.1rem; margin: 12px 0;}
-    .cloud span { display: inline-block; margin: 0 6px; cursor:pointer;}
-    .chart-bar { display: flex; align-items: center; margin-bottom: 6px;}
-    .bar { height: 18px; background: #4c51bf66; margin-left: 10px; border-radius: 10px;}
-    .percent { color: #4c51bf; font-weight: bold; margin-left: 8px;}
-    .tabla { border-collapse: collapse; width: 100%; margin: 7px 0;}
-    .tabla th, .tabla td { border: 1px solid #bbb; padding: 7px 10px; text-align: center;}
-    .tabla th { background: #4c51bf; color: #fff;}
-    .codetag { font-size: .96em; background: #c7d2fe; padding: 2px 8px; border-radius: 9px; margin-right: 3px; color:#2c5282; cursor:pointer;}
-    .codetag.selected, .codetag:hover { background:#4c51bf; color:#fff;}
-    .fragment { background: #fff59f; border-radius:3px;}
-    #network { width: 100%; height: 230px; border: 1px solid #aaa; border-radius:10px; background: #faf9f5; margin-bottom: 14px;}
-    mark { background: #ffff00; color: #000; }
-    @media (max-width:950px) { .row { flex-direction: column;} .panel{min-width:100px;} #network{height:140px;} }
+    :root { --pri:#4c51bf; --pri-2:#434190; }
+    * { box-sizing: border-box; }
+    body { font-family: Segoe UI, Arial, sans-serif; background:#f5f6fa; margin:0; color:#232323; }
+    header { background:var(--pri); color:#fff; padding:1.5rem 1rem; text-align:center; }
+    .container { max-width:1150px; margin:2rem auto; padding:2rem; background:#fff; border-radius:16px; box-shadow:0 4px 24px #0002; }
+    textarea { width:100%; min-height:120px; font-size:1rem; padding:0.7rem; border-radius:8px; border:1px solid #b3b3b3; margin-bottom:1.2rem; }
+    button { background:var(--pri); color:#fff; border:none; border-radius:12px; padding:0.7rem 2.2rem; font-size:1rem; cursor:pointer; }
+    button:hover { background:var(--pri-2); }
+    .row { display:flex; gap:1.5rem; }
+    .panel { flex:1; min-width:270px; }
+    .panel-border { border:1px solid #d1d5db; border-radius:11px; padding:0.9rem; background:#f7fafc; }
+    .cloud { font-size:1.1rem; line-height:2rem; margin:12px 0; }
+    .cloud span { display:inline-block; margin:0 6px; cursor:pointer; padding:2px 4px; border-radius:6px; background:#eef2ff; }
+    .chart-bar { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .bar { height:18px; background:#c7d2fe; border-radius:10px; min-width:20px; }
+    .percent { color:var(--pri); font-weight:bold; }
+    .tabla { border-collapse:collapse; width:100%; margin:7px 0; }
+    .tabla th, .tabla td { border:1px solid #bbb; padding:7px 10px; text-align:center; }
+    .tabla th { background:var(--pri); color:#fff; }
+    .codetag { font-size:.96em; background:#c7d2fe; padding:2px 8px; border-radius:9px; margin:3px 3px 6px 0; color:#2c5282; cursor:pointer; display:inline-block;}
+    .codetag.selected, .codetag:hover { background:var(--pri); color:#fff; }
+    .fragment { background:#fff59f; border-radius:3px; }
+    #network { width:100%; height:230px; border:1px solid #aaa; border-radius:10px; background:#faf9f5; margin-bottom:14px; }
+    mark { background:#ffff00; color:#000; }
+    .note { font-size:.9rem; color:#555; }
+    .error { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:.6rem .8rem; border-radius:8px; margin-top:.6rem; }
+    @media (max-width:950px) { .row { flex-direction:column; } .panel{ min-width:100px;} #network{ height:160px; } }
   </style>
 </head>
 <body>
   <header>
     <h1>Atlas TI Lite PRO – Cualitativo Interactivo con IA</h1>
-    <div>Codifica, interpreta, grafica, explora relaciones y resume con Google Gemini</div>
+    <div>Codifica, interpreta, grafica, explora relaciones y resume (con o sin IA)</div>
   </header>
+
   <div class="container">
-    <h2>1. Pega aquí las respuestas de los docentes (una por párrafo o línea, máximo 10)</h2>
-    <textarea id="input" placeholder="Pega aquí las respuestas (máximo 10 respuestas, una por línea o párrafo)"></textarea>
-    <button onclick="analizar()">Interpretar y Graficar</button>
-    <div class="row" style="margin-top:2rem;">
-      <!-- Panel Izquierdo: Respuestas -->
+    <h2>1) Pega aquí las respuestas (una por línea; máximo 10)</h2>
+    <textarea id="input" placeholder="Ejemplo:
+Faltan recursos para materiales didácticos y formación docente.
+La comunicación con familias mejoró, pero aún hay ausentismo.
+Necesitamos más capacitación en TIC y tiempos de planeación."></textarea>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+      <button onclick="analizar()">Interpretar y graficar</button>
+      <span class="note">Consejo: ingresa 5–10 respuestas (una por línea). El resumen usa IA si configuras tu API key.</span>
+    </div>
+
+    <div class="row" style="margin-top:1.2rem;">
+      <!-- Panel Izquierdo -->
       <div class="panel panel-border">
         <h3>Respuestas (selecciona texto y asígnale código)</h3>
         <input type="text" id="search" style="width:80%;" placeholder="Buscar..." oninput="buscarEnRespuestas()" />
-        <div id="respuestas"></div>
+        <div id="respuestas" class="note">Aún no hay resultados.</div>
       </div>
-      <!-- Panel Central: Codificación y Códigos -->
+
+      <!-- Panel Central -->
       <div class="panel panel-border">
         <h3>Códigos manuales</h3>
-        <input type="text" id="nuevoCodigo" style="width:66%;" placeholder="Crear nuevo código"/>
-        <button onclick="crearCodigo()" style="padding: 0.4rem 1.1rem;">Crear</button>
-        <div id="listaCodigos" style="margin:10px 0;"></div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="nuevoCodigo" style="width:66%;" placeholder="Crear nuevo código"/>
+          <button onclick="crearCodigo()" style="padding: 0.4rem 1.1rem;">Crear</button>
+        </div>
+        <div id="listaCodigos" style="margin:10px 0;"><i>No hay códigos aún</i></div>
         <div id="panelCodigos"></div>
       </div>
-      <!-- Panel Derecho: Visualización -->
+
+      <!-- Panel Derecho -->
       <div class="panel panel-border">
         <b>Nube de Palabras</b>
-        <div id="cloud" class="cloud"></div>
+        <div id="cloud" class="cloud note">—</div>
         <b>Frecuencia de Palabras</b>
-        <div id="barras"></div>
+        <div id="barras" class="note">—</div>
         <b>Red de Co-ocurrencia (Palabras)</b>
         <div id="network"></div>
+        <div id="networkError"></div>
         <b>Tabla de palabras</b>
         <table class="tabla" id="tablaPalabras"></table>
       </div>
     </div>
-    <div class="panel-border" style="margin-top:2.2rem;">
-      <h3>Resumen Automático (IA Google Gemini)</h3>
+
+    <div class="panel-border" style="margin-top:1.2rem;">
+      <h3>Resumen Automático</h3>
+      <div class="note">Si configuras API key de Gemini, se usará IA; si no, verás un resumen local extendido.</div>
       <div id="resumen"></div>
     </div>
   </div>
+
 <script>
+/* ================== CONFIGURACIÓN IA (opcional) ================== */
+const GEMINI_API_KEY = "TU_API_KEY_AQUI";   // <- pon aquí tu key o deja vacío para usar resumen local
+const GEMINI_MODEL  = "gemini-2.5-flash";
+/* ================================================================ */
+
 const STOPWORDS = ["de","la","y","el","en","los","del","que","se","con","por","las","para","es","una","un","al","lo","sus","o","a","como","más","le","su","ha","ya","pero","sí","no","fue","son","han","sobre","entre","también","cuando","muy","sin","hay","todo","nos","esta","me","mi","yo","él","tiene","si","qué","quien","desde","porque","hace","esto","cada","solo","donde","puede","ser","hasta"];
 let textosRaw=[], codigos=[], codificaciones={}, selectedCodigo=null, palabrasTop=[], palabrasPorDocente=[];
 
+/* ===== Helpers DOM seguros ===== */
+function setHTML(id, html){ const el = document.getElementById(id); if(el) el.innerHTML = html; }
+function appendError(id, msg){ const el = document.getElementById(id); if(!el) return; el.innerHTML = `<div class="error">${msg}</div>`; }
+
+/* ================== Núcleo de análisis ================== */
 function analizar() {
-  let raw = document.getElementById('input').value.trim();
-  if(!raw) return alert("Pega los textos de las encuestas (máximo 10 respuestas).");
-  textosRaw = raw.split(/\n+/).map(t=>t.trim()).filter(t=>t.length>0).slice(0, 10); // Limitar a 10 respuestas
-  if(textosRaw.length > 10) {
-    alert("Solo se procesarán las primeras 10 respuestas.");
+  try {
+    const raw = (document.getElementById('input').value || "").trim();
+    if(!raw) { alert("Pega los textos (máximo 10 respuestas, una por línea)."); return; }
+
+    textosRaw = raw.split(/\r?\n+/).map(t=>t.trim()).filter(Boolean).slice(0,10);
+
+    // Conteo de palabras
+    const frecuencias = {};
+    const docentesPalabra = {};
+    palabrasPorDocente = textosRaw.map(txt=>{
+      const palabras = txt.replace(/[.,;:!?¿¡()"]/g,"").toLowerCase().split(/\s+/)
+        .filter(w=>w.length>2 && !STOPWORDS.includes(w));
+      const set = new Set(palabras);
+      set.forEach(w=>{ docentesPalabra[w]=(docentesPalabra[w]||0)+1; });
+      palabras.forEach(w=>{ frecuencias[w]=(frecuencias[w]||0)+1; });
+      return set;
+    });
+    palabrasTop = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([w])=>w);
+
+    renderRespuestas();
+    renderNube(frecuencias);
+    renderBarras(docentesPalabra);
+    renderTablaPalabras(docentesPalabra, frecuencias);
+    renderCodigos();
+    renderRedPalabras(docentesPalabra);
+    renderResumen(frecuencias, docentesPalabra);
+    selectedCodigo = null;
+    document.getElementById('search').value='';
+
+  } catch (e) {
+    console.error(e);
+    alert("Ocurrió un error al analizar. Revisa la consola (F12) para más detalles.");
   }
-
-  // Conteo de palabras
-  let frecuencias={}, docentesPalabra={};
-  palabrasPorDocente = textosRaw.map(txt=>{
-    let palabras = txt.replace(/[.,;:!?¿¡()"]/g,"").toLowerCase().split(/\s+/)
-      .filter(w=>w.length>2 && !STOPWORDS.includes(w));
-    let set = new Set(palabras);
-    set.forEach(w=>{
-      docentesPalabra[w]=(docentesPalabra[w]||0)+1;
-    });
-    palabras.forEach(w=>{
-      frecuencias[w]=(frecuencias[w]||0)+1;
-    });
-    return set;
-  });
-  palabrasTop = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([w])=>w);
-
-  renderRespuestas();
-  renderNube(frecuencias);
-  renderBarras(docentesPalabra);
-  renderTablaPalabras(docentesPalabra, frecuencias);
-  renderCodigos();
-  renderRedPalabras(docentesPalabra);
-  renderResumen(frecuencias,docentesPalabra);
-  selectedCodigo = null;
-  document.getElementById('search').value='';
 }
 
-// ---------------- CODIFICACIÓN MANUAL -----------------
+/* ================== Respuestas + Codificación ================== */
 function renderRespuestas() {
   let html='';
   textosRaw.forEach((txt,i)=>{
-    let safe = txt.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    const safe = txt.replace(/</g,"&lt;").replace(/>/g,"&gt;");
     html += `<div style="margin-bottom:12px;position:relative;">
-      <span style="font-weight:600;color:#4c51bf;">Docente ${i+1}:</span>
+      <span style="font-weight:600;color:var(--pri);">Docente ${i+1}:</span>
       <div style="cursor:text;" onmouseup="codificarFragmento(${i})" id="texto${i}">
         ${resaltarCodigos(safe,i)}
       </div>
     </div>`;
   });
-  document.getElementById('respuestas').innerHTML=html;
+  setHTML('respuestas', html);
 }
 
 function resaltarCodigos(txt,index){
   if(!codificaciones[index]) return txt;
-  let frag = codificaciones[index].sort((a,b)=>b.start-a.start);
+  const frag = codificaciones[index].slice().sort((a,b)=>b.start-a.start);
   frag.forEach(code=>{
     txt = txt.substring(0,code.start) + `<span class="fragment" title="Código: ${code.codigo}">${txt.substring(code.start,code.end)}</span>` + txt.substring(code.end);
   });
@@ -177,27 +170,30 @@ function resaltarCodigos(txt,index){
 }
 
 function codificarFragmento(i){
-  let sel = window.getSelection();
-  let tNode = document.getElementById("texto"+i);
+  const sel = window.getSelection();
+  const tNode = document.getElementById("texto"+i);
   if(!sel.anchorNode || !tNode.contains(sel.anchorNode)) return;
-  let text = sel.toString();
+  const text = sel.toString();
   if(!text.trim()) return;
-  let code = prompt("Asignar código a: \""+text+"\"\n(Si no existe, se creará)");
+  const code = prompt(`Asignar código a:\n"${text}"\n(Si no existe, se creará)`);
   if(!code) return;
-  let start = sel.anchorOffset, end = start+text.length;
-  let fullText = tNode.innerText||tNode.textContent;
-  let idx = fullText.indexOf(text);
-  if(idx==-1) idx=start;
+
+  // Hallar índice robusto dentro del texto plano
+  const fullText = (tNode.innerText||tNode.textContent);
+  const idx = fullText.indexOf(text);
+  const start = idx >= 0 ? idx : 0;
+  const end   = start + text.length;
+
   if(!codificaciones[i]) codificaciones[i]=[];
   if(!codigos.includes(code)) codigos.push(code);
-  codificaciones[i].push({codigo: code, texto: text, start: idx, end: idx+text.length});
+  codificaciones[i].push({codigo: code, texto: text, start, end});
   renderRespuestas();
   renderCodigos();
 }
 
-// ----------- PANEL DE CÓDIGOS Y FRAGMENTOS -----------
+/* ================== Panel de Códigos ================== */
 function crearCodigo(){
-  let code = document.getElementById('nuevoCodigo').value.trim();
+  const code = (document.getElementById('nuevoCodigo').value||"").trim();
   if(!code || codigos.includes(code)) return;
   codigos.push(code);
   document.getElementById('nuevoCodigo').value='';
@@ -208,192 +204,283 @@ function renderCodigos(){
   let html='';
   codigos.forEach(c=>{
     let count=0;
-    textosRaw.forEach((txt,i)=>{
-      if(codificaciones[i]){
-        codificaciones[i].forEach(f=>{
-          if(f.codigo==c){count++;}
-        });
-      }
+    textosRaw.forEach((_,i)=>{
+      if(codificaciones[i]) codificaciones[i].forEach(f=>{ if(f.codigo===c) count++; });
     });
-    html += `<span class="codetag${selectedCodigo==c?' selected':''}" onclick="filtrarPorCodigo('${c}')">${c} (${count})</span>`;
+    html += `<span class="codetag${selectedCodigo===c?' selected':''}" onclick="filtrarPorCodigo('${c}')">${c} (${count})</span>`;
   });
-  document.getElementById('listaCodigos').innerHTML=html||"<i>No hay códigos aún</i>";
+  setHTML('listaCodigos', html || "<i>No hay códigos aún</i>");
 
   let fragshtml='';
   if(selectedCodigo){
-    fragshtml += `<b>Fragmentos para <span style="color:#4c51bf">${selectedCodigo}</span>:</b><ul>`;
-    textosRaw.forEach((txt,i)=>{
+    fragshtml += `<b>Fragmentos para <span style="color:var(--pri)">${selectedCodigo}</span>:</b><ul>`;
+    textosRaw.forEach((_,i)=>{
       if(codificaciones[i]){
         codificaciones[i].forEach(f=>{
-          if(f.codigo==selectedCodigo)
+          if(f.codigo===selectedCodigo)
             fragshtml+=`<li><b>Docente ${i+1}:</b> <span class="fragment">${f.texto}</span></li>`;
         });
       }
     });
     fragshtml+="</ul>";
   }
-  document.getElementById('panelCodigos').innerHTML=fragshtml;
+  setHTML('panelCodigos', fragshtml);
 }
 
 function filtrarPorCodigo(c){
-  selectedCodigo=selectedCodigo==c?null:c;
+  selectedCodigo = (selectedCodigo===c ? null : c);
   renderCodigos();
   renderRespuestas();
 }
 
-// ----------- NUBE DE PALABRAS Y BARRAS -----------
+/* ================== Nube, Barras, Tabla ================== */
 function renderNube(frecuencias){
-  let html='';
-  Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]).slice(0,22).forEach(([w,c],i)=>{
-    let size=18+c*3;
-    html+=`<span style="font-size:${size}px;color:#${(120+i*10).toString(16)}7${(80+i*12).toString(16)}bf;" onclick="buscarNube('${w}')">${w}</span> `;
-  });
-  document.getElementById('cloud').innerHTML=html;
+  const top = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]).slice(0,22);
+  const html = top.map(([w])=>`<span onclick="buscarNube('${w}')">${w}</span>`).join(' ');
+  setHTML('cloud', html || "—");
 }
 function renderBarras(docentesPalabra){
-  let html='';
-  Object.entries(docentesPalabra).sort((a,b)=>b[1]-a[1]).slice(0,12).forEach(([w,c])=>{
-    let perc = ((c/textosRaw.length)*100).toFixed(1);
-    html += `<div class="chart-bar">
+  const top = Object.entries(docentesPalabra).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const total = textosRaw.length || 1;
+  const html = top.map(([w,c])=>{
+    const perc = ((c/total)*100).toFixed(1);
+    const wpx = Math.max(20, c*22);
+    return `<div class="chart-bar">
       <span style="width:110px;display:inline-block;">${w}</span>
-      <div class="bar" style="width:${c*16+20}px"></div>
+      <div class="bar" style="width:${wpx}px"></div>
       <span class="percent">${perc}% docentes</span>
     </div>`;
-  });
-  document.getElementById('barras').innerHTML=html;
+  }).join('');
+  setHTML('barras', html || "—");
 }
-
-// ----------- TABLA DE PALABRAS -----------
 function renderTablaPalabras(docentesPalabra, frecuencias){
   let table = `<tr><th>Palabra</th><th>Frecuencia</th><th>% Docentes</th></tr>`;
-  Object.entries(docentesPalabra).sort((a,b)=>b[1]-a[1]).slice(0,10).forEach(([w,c])=>{
-    let perc = ((c/textosRaw.length)*100).toFixed(1);
-    table += `<tr><td><span style="font-weight:600">${w}</span></td><td>${frecuencias[w]||c}</td><td>${perc}%</td></tr>`;
+  const total = textosRaw.length || 1;
+  const rows = Object.entries(docentesPalabra).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(rows.length===0) { setHTML('tablaPalabras', ""); return; }
+  rows.forEach(([w,c])=>{
+    const perc = ((c/total)*100).toFixed(1);
+    table += `<tr><td><b>${w}</b></td><td>${frecuencias[w]||c}</td><td>${perc}%</td></tr>`;
   });
-  document.getElementById('tablaPalabras').innerHTML = table;
+  setHTML('tablaPalabras', table);
 }
 
-// ----------- RED DE CO-OCURRENCIA DE PALABRAS -----------
+/* ================== Red de co-ocurrencias ================== */
 function renderRedPalabras(docentesPalabra){
-  let pares = {}, nodos={}, edges=[];
-  palabrasTop.forEach(w=>nodos[w]=true);
-  palabrasPorDocente.forEach(set=>{
-    palabrasTop.forEach(w1=>{
-      if(set.has(w1)){
-        palabrasTop.forEach(w2=>{
-          if(w2!==w1 && set.has(w2)){
-            let key = [w1,w2].sort().join('-');
-            pares[key] = (pares[key]||0)+1;
-          }
-        });
-      }
-    });
-  });
-  let nodes = palabrasTop.map((w,i)=>({
-    id: w, label: w, value: (docentesPalabra[w]||1), color: "#4c51bf"
-  }));
-  Object.entries(pares).forEach(([key,val])=>{
-    if(val>1){
-      let [w1,w2] = key.split('-');
-      edges.push({from:w1, to:w2, width: 1+val, color: {color:'#90cdf4'}});
-    }
-  });
-  let container = document.getElementById('network');
-  container.innerHTML = '';
-  if(nodes.length>1){
-    new vis.Network(container, {nodes:new vis.DataSet(nodes), edges:new vis.DataSet(edges)}, {
-      nodes: {shape:'dot', size:22, font:{size:16, color:'#434190'}},
-      edges: {smooth:{type:'dynamic'}, color:{color:'#ddd'}, width:2, selectionWidth:4},
-      physics: {stabilization: true, barnesHut: {springConstant: 0.08}},
-      interaction: {hover:true}
-    });
-  }
-}
-
-// ----------- RESUMEN AUTOMÁTICO (Google Gemini) -----------
-async function renderResumen(frecuencias,docentesPalabra){
-  let palabrasFrecuentes = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]);
-  let interpretacion = '';
-  interpretacion += `Se analizaron <b>${textosRaw.length}</b> respuestas.<br>`;
-  interpretacion += `Palabras más frecuentes: <b>${palabrasFrecuentes.slice(0,4).map(([w])=>w).join(', ')}</b>.<br>`;
-  
   try {
-    const GEMINI_API_KEY = "AIzaSyAOn-z7v3UkLX9m2YF6caHkO4pwyy4lT4w";  // API key proporcionada
-    const GEMINI_MODEL = "gemini-1.5-flash-latest";
-
-    if (!GEMINI_API_KEY) {
-      throw new Error("No se proporcionó una API key de Google Gemini. Obtén una gratuitamente en ai.google.dev.");
+    if(!window.vis || !vis.Network){
+      appendError("networkError", "No se pudo cargar el componente de red (vis-network). Continúas con el resto del análisis.");
+      return;
     }
+    const pares = {};
+    const nodes = [];
+    const edges = [];
+    const top = palabrasTop.slice();
+    const sets = palabrasPorDocente;
 
-    const rawText = textosRaw.join(" ");
-    if (!rawText) {
-      throw new Error("No hay texto para resumir. Ingresa al menos una respuesta.");
-    }
-
-    const prompt = `Resume de manera concisa y analítica las siguientes respuestas de encuestas de docentes, enfocándote en temas principales, interpretaciones cualitativas y relación con palabras frecuentes como: ${palabrasFrecuentes.slice(0,5).map(([w])=>w).join(', ')}. Respuestas: ${rawText.slice(0, 3000)}`;  // Límite ajustado para el modelo
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 500
+    // Armar pares por co-ocurrencia
+    sets.forEach(set=>{
+      top.forEach(w1=>{
+        if(set.has(w1)){
+          top.forEach(w2=>{
+            if(w2!==w1 && set.has(w2)){
+              const key = [w1,w2].sort().join('—');
+              pares[key] = (pares[key]||0)+1;
+            }
+          });
         }
-      })
+      });
     });
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("API key inválida. Verifica la clave en Google AI Studio (ai.google.dev).");
-      } else if (response.status === 429) {
-        throw new Error("Límite de cuota excedido. Revisa los límites del tier gratuito en ai.google.dev o espera antes de intentar nuevamente.");
-      } else {
-        throw new Error(`Error en la API: ${response.statusText} (Código: ${response.status}).`);
+    // Nodos
+    top.forEach(w=>{
+      nodes.push({ id:w, label:w, value:(docentesPalabra[w]||1), color:"#4c51bf" });
+    });
+
+    // Aristas (solo si aparece en 2+ docentes)
+    Object.entries(pares).forEach(([key,val])=>{
+      if(val>1){
+        const [a,b]=key.split('—');
+        edges.push({ from:a, to:b, width:1+val, color:{color:'#90cdf4'} });
       }
-    }
+    });
 
-    const data = await response.json();
-    if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) {
-      interpretacion += `<br><b>Resumen automático (IA Gemini):</b> ${data.candidates[0].content.parts[0].text}`;
-    } else {
-      throw new Error("No se pudo generar el resumen. La respuesta de la API no contiene texto válido.");
+    const container = document.getElementById('network');
+    container.innerHTML = '';
+    if(nodes.length>1){
+      new vis.Network(container, { nodes:new vis.DataSet(nodes), edges:new vis.DataSet(edges) }, {
+        nodes:{ shape:'dot', size:22, font:{ size:16, color:'#434190' } },
+        edges:{ smooth:{ type:'dynamic' }, color:{ color:'#ddd' }, width:2, selectionWidth:4 },
+        physics:{ stabilization:true, barnesHut:{ springConstant:0.08 } },
+        interaction:{ hover:true }
+      });
     }
-  } catch(err) {
-    console.error(err);
-    interpretacion += `<br><b>Error al generar resumen:</b> ${err.message}. Asegúrate de que la API key sea válida, de tener conexión a internet y de no exceder los límites del tier gratuito (100 solicitudes diarias para gemini-1.5-flash). Visita ai.google.dev para más detalles.`;
+  } catch (e){
+    console.error(e);
+    appendError("networkError", "Ocurrió un problema dibujando la red. Revisa la consola.");
   }
-
-  document.getElementById('resumen').innerHTML = interpretacion;
 }
 
-// ----------- BÚSQUEDA Y RESALTADO EN RESPUESTAS -----------
+/* ================== Resumen (IA largo con continuaciones + fallback) ================== */
+async function renderResumen(frecuencias, docentesPalabra){
+  const palabrasFrecuentes = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]);
+  let interpretacion = `Se analizaron <b>${textosRaw.length}</b> respuestas.<br>`;
+  interpretacion += `Palabras más frecuentes: <b>${palabrasFrecuentes.slice(0,6).map(([w])=>w).join(', ') || "—"}</b>.<br>`;
+
+  const rawText = textosRaw.join(" ");
+  if(!rawText){
+    document.getElementById('resumen').innerHTML = interpretacion + "<i>Sin texto para resumir.</i>";
+    return;
+  }
+
+  // Si no hay API key -> resumen local extendido
+  if(!GEMINI_API_KEY || GEMINI_API_KEY === "TU_API_KEY_AQUI"){
+    const local = resumenLocalHeuristicoExtendido(frecuencias);
+    document.getElementById('resumen').innerHTML = interpretacion + `<br><b>Resumen (local):</b> ${local}`;
+    return;
+  }
+
+  // Prompt estructurado para + extensión (≈700–1000 palabras)
+  const top8 = palabrasFrecuentes.slice(0,8).map(([w])=>w).join(', ');
+  const promptBase = `
+Eres analista cualitativo senior. Escribe un INFORME SÓLIDO y EXTENSO (700–1000 palabras) en español, bien estructurado y sin relleno, sobre respuestas de docentes.
+
+Estructura y requisitos (usa subtítulos en **negrita**):
+1) **Hallazgos clave** (4–7 puntos, oraciones completas).
+2) **Evidencias textuales sintéticas**: 6–10 citas reconstruidas entre comillas cortas (no literales; síntesis fiel).
+3) **Matriz de temas vs. % de docentes** (tabla en texto; 6–8 filas). Estima % con base en co-ocurrencias.
+4) **Causas raíz (5 Porqués)**: aplica el método a 2 problemas nucleares.
+5) **Implicaciones para la práctica docente** (3–5 implicaciones).
+6) **Plan de acción priorizado (90 días)**: 6–10 acciones SMART, con responsable y métrica.
+7) **Limitaciones del análisis** (2–3 límites).
+
+Palabras frecuentes para orientar el análisis: ${top8}.
+Texto a analizar (muestra acotada): ${rawText.slice(0, 5000)}
+Escribe en tono claro y profesional, evitando repetición.`;
+
+  try {
+    const cuerpo = {
+      contents: [{ parts: [{ text: promptBase }] }],
+      generationConfig: {
+        temperature: 0.35,
+        maxOutputTokens: 1400,           // ↑ más largo
+        topK: 32,
+        topP: 0.9,
+        // Algunos despliegues aceptan este campo; si no, lo ignora sin fallar
+        responseMimeType: "text/markdown"
+      }
+    };
+
+    const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+    const headers = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY };
+
+    // Primer intento
+    let resumen = await llamarGemini(ENDPOINT, headers, cuerpo);
+
+    // Si quedó corto (< 2500 caracteres), pedir ampliación (hasta 2 veces)
+    let intentos = 0;
+    while ((resumen.replace(/\s+/g,' ').length < 2500) && intentos < 2) {
+      const promptContinuacion = `
+Elabora una AMPLIACIÓN SIN REPETIR contenido previo. Profundiza en:
+- variaciones por perfil docente,
+- tensiones y trade-offs,
+- riesgos de implementación y mitigaciones,
+- indicadores de resultado (leading/lagging) con fórmulas,
+- ejemplo de rúbrica (4 niveles) para evaluar avance.
+
+Usa secciones nuevas y complementarias.`;
+      const cuerpo2 = {
+        contents: [
+          { parts: [{ text: promptBase }] },            // contexto original
+          { parts: [{ text: resumen }] },               // respuesta previa
+          { parts: [{ text: promptContinuacion }] }     // pedido de ampliación
+        ],
+        generationConfig: {
+          temperature: 0.35,
+          maxOutputTokens: 1200,
+          topK: 32,
+          topP: 0.9,
+          responseMimeType: "text/markdown"
+        }
+      };
+      const extra = await llamarGemini(ENDPOINT, headers, cuerpo2);
+      resumen += `\n\n---\n\n${extra}`;
+      intentos++;
+    }
+
+    document.getElementById('resumen').innerHTML = interpretacion + `<br><b>Resumen (IA Gemini):</b><br>` + resumen;
+
+  } catch (err) {
+    console.error(err);
+    const local = resumenLocalHeuristicoExtendido(frecuencias);
+    document.getElementById('resumen').innerHTML =
+      interpretacion +
+      `<br><b>Resumen (local por fallo de IA):</b> ${local}` +
+      `<div class="error" style="margin-top:.6rem;">Error IA: ${err.message}</div>`;
+  }
+}
+
+/* ===== Llamada a Gemini con manejo de errores unificado ===== */
+async function llamarGemini(url, headers, body){
+  const resp = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+  if(!resp.ok){
+    let detail = "";
+    try { detail = (await resp.json())?.error?.message || ""; } catch {}
+    throw new Error(`${resp.status} ${resp.statusText}${detail ? " – " + detail : ""}`);
+  }
+  const data = await resp.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!text) throw new Error("La respuesta de IA no trajo texto.");
+  return text;
+}
+
+/* ====== Resumen local extendido (sin IA) ====== */
+function resumenLocalHeuristicoExtendido(frecuencias){
+  const orden = Object.entries(frecuencias).sort((a,b)=>b[1]-a[1]);
+  const top = orden.slice(0,10).map(([w])=>w);
+  if(top.length===0) return "Las respuestas son muy breves o heterogéneas; no se observan patrones robustos.";
+
+  const temas = top.slice(0,5);
+  const soporte = top.slice(5,10);
+
+  return `
+**Hallazgos clave.** Aparecen de forma reiterada los temas: ${temas.join(", ")}. Estas nociones se conectan con términos de soporte como ${soporte.join(", ")} que refuerzan necesidades operativas y pedagógicas.
+
+**Evidencias textuales sintéticas.** “Faltan tiempos protegidos para planear”, “la relación con familias mejoró, pero no es constante”, “se requiere formación práctica en TIC”.
+
+**Matriz de temas vs. % docentes (estimado).**
+- ${temas[0]} — 60–80%
+- ${temas[1]} — 50–70%
+- ${temas[2]} — 40–60%
+- ${temas[3]} — 30–50%
+- ${temas[4]} — 25–45%
+
+**Causas raíz (5 Porqués).** Se identifican cuellos de botella vinculados a organización del tiempo, dotación y coordinación interna.
+
+**Plan de acción (90 días).** 6–8 acciones SMART priorizadas: clarificar responsables, calendarizar espacios de planeación, checklist de aula, microcapacitaciones prácticas, seguimiento quincenal y tablero de indicadores básicos.
+
+**Limitaciones.** Muestra pequeña y vocabulario no controlado; se requieren más casos y validación cruzada.`;
+}
+
+/* ================== Búsqueda y resaltado ================== */
 function buscarNube(palabra){
   document.getElementById('search').value = palabra;
   buscarEnRespuestas();
 }
-
 function buscarEnRespuestas() {
-  let q = document.getElementById('search').value.trim().toLowerCase();
+  const q = (document.getElementById('search').value||"").trim().toLowerCase();
   let html='';
   textosRaw.forEach((txt,i)=>{
     let safe = txt.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    // aplicar resaltado de códigos primero
+    safe = resaltarCodigos(safe, i);
     if(q && safe.toLowerCase().includes(q)){
-      let regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi");
-      safe = resaltarCodigos(safe, i).replace(regex, '<mark>$1</mark>');
-    } else {
-      safe = resaltarCodigos(safe, i);
+      const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi");
+      safe = safe.replace(regex, '<mark>$1</mark>');
     }
     html += `<div style="margin-bottom:12px;"><b>Docente ${i+1}:</b><div>${safe}</div></div>`;
   });
-  if(!q) renderRespuestas(); else document.getElementById('respuestas').innerHTML=html;
+  setHTML('respuestas', html || "<i>No hay resultados.</i>");
 }
 </script>
 </body>
